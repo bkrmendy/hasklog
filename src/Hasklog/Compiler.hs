@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Hasklog.Compiler (
   compileListing
 ) where
@@ -329,7 +329,7 @@ data Functor = Functor Identifier Int
              deriving (Eq, Ord, Show)
 
 
-instance Syntax Program where
+instance Syntax WAMAbstractSyntax Program where
 
   kind _ = "program"
 
@@ -338,7 +338,7 @@ instance Syntax Program where
   concrete (Program predicates) = intercalate "\n\n" (map concrete predicates)
 
 
-instance Syntax Predicate where
+instance Syntax WAMAbstractSyntax Predicate where
 
   kind _ = "predicate"
 
@@ -350,7 +350,7 @@ instance Syntax Predicate where
 
 
 
-instance Syntax Rule where
+instance Syntax WAMAbstractSyntax Rule where
 
   kind _ = "rule"
 
@@ -362,7 +362,7 @@ instance Syntax Rule where
 
 
 
-instance Syntax WAM where
+instance Syntax WAMAbstractSyntax WAM where
 
   kind _ = "WAM instruction"
 
@@ -387,14 +387,14 @@ delim :: [String] -> String
 delim = intercalate "\t"
 
 
-instance Syntax Label where
+instance Syntax WAMAbstractSyntax Label where
 
   kind _ = "label"
 
   concrete (Label l) = show l
 
 
-instance Syntax Register where
+instance Syntax WAMAbstractSyntax Register where
 
   kind (Register _) = "register"
   kind (StackVar _) = "stack variable"
@@ -403,7 +403,7 @@ instance Syntax Register where
   concrete (StackVar v) = "Y" ++ show v
 
 
-instance Syntax Functor where
+instance Syntax WAMAbstractSyntax Functor where
 
   kind _ = "functor"
 

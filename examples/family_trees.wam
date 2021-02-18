@@ -1,0 +1,174 @@
+ancestor_descendent/2:
+	0:
+		try_me_else	1
+		allocate	2
+		get_variable	Y1	X1
+		get_variable	Y2	X2
+		put_value	Y1	X1
+		put_value	Y2	X2
+		call	parent_child/2
+		deallocate
+		proceed
+	1:
+		trust_me
+		allocate	3
+		get_variable	Y1	X1
+		get_variable	Y2	X2
+		put_value	Y1	X1
+		put_variable	Y3	X2
+		call	parent_child/2
+		put_value	Y3	X1
+		put_value	Y2	X2
+		call	ancestor_descendent/2
+		deallocate
+		proceed
+
+father_child/2:
+	0:
+		allocate	2
+		get_variable	Y1	X1
+		get_variable	Y2	X2
+		put_value	Y1	X1
+		call	male/1
+		put_value	Y1	X1
+		put_value	Y2	X2
+		call	parent_child/2
+		deallocate
+		proceed
+
+female/1:
+	0:
+		try_me_else	1
+		allocate	0
+		get_structure	mary/0	X1
+		deallocate
+		proceed
+	1:
+		retry_me_else	2
+		allocate	0
+		get_structure	susan/0	X1
+		deallocate
+		proceed
+	2:
+		trust_me
+		allocate	0
+		get_structure	kim/0	X1
+		deallocate
+		proceed
+
+male/1:
+	0:
+		try_me_else	1
+		allocate	0
+		get_structure	bill/0	X1
+		deallocate
+		proceed
+	1:
+		retry_me_else	2
+		allocate	0
+		get_structure	ted/0	X1
+		deallocate
+		proceed
+	2:
+		retry_me_else	3
+		allocate	0
+		get_structure	bob/0	X1
+		deallocate
+		proceed
+	3:
+		retry_me_else	4
+		allocate	0
+		get_structure	george/0	X1
+		deallocate
+		proceed
+	4:
+		trust_me
+		allocate	0
+		get_structure	dave/0	X1
+		deallocate
+		proceed
+
+mother_child/2:
+	0:
+		allocate	2
+		get_variable	Y1	X1
+		get_variable	Y2	X2
+		put_value	Y1	X1
+		call	female/1
+		put_value	Y1	X1
+		put_value	Y2	X2
+		call	parent_child/2
+		deallocate
+		proceed
+
+parent_child/2:
+	0:
+		try_me_else	1
+		allocate	0
+		get_structure	bill/0	X1
+		get_structure	ted/0	X2
+		deallocate
+		proceed
+	1:
+		retry_me_else	2
+		allocate	0
+		get_structure	bill/0	X1
+		get_structure	bob/0	X2
+		deallocate
+		proceed
+	2:
+		retry_me_else	3
+		allocate	0
+		get_structure	mary/0	X1
+		get_structure	ted/0	X2
+		deallocate
+		proceed
+	3:
+		retry_me_else	4
+		allocate	0
+		get_structure	mary/0	X1
+		get_structure	bob/0	X2
+		deallocate
+		proceed
+	4:
+		retry_me_else	5
+		allocate	0
+		get_structure	george/0	X1
+		get_structure	mary/0	X2
+		deallocate
+		proceed
+	5:
+		retry_me_else	6
+		allocate	0
+		get_structure	susan/0	X1
+		get_structure	mary/0	X2
+		deallocate
+		proceed
+	6:
+		retry_me_else	7
+		allocate	0
+		get_structure	dave/0	X1
+		get_structure	george/0	X2
+		deallocate
+		proceed
+	7:
+		trust_me
+		allocate	0
+		get_structure	kim/0	X1
+		get_structure	george/0	X2
+		deallocate
+		proceed
+
+siblings/2:
+	0:
+		allocate	3
+		get_variable	Y1	X1
+		get_variable	Y2	X2
+		put_variable	Y3	X1
+		put_value	Y1	X2
+		call	parent_child/2
+		put_value	Y3	X1
+		put_value	Y2	X2
+		call	parent_child/2
+		deallocate
+		proceed

@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Hasklog.Data (
   Identifier,
@@ -10,6 +11,8 @@ module Hasklog.Data (
   HornClause(..),
   Listing,
 
+  WAMAbstractSyntax,
+  CSyntax,
   Syntax,
   kind,
   concrete,
@@ -78,12 +81,13 @@ data HornClause = DefiniteClause Term [Term]
 
 type Listing = Seq HornClause
 
-
-
+-- | Compiler backends
+data WAMAbstractSyntax
+data CSyntax
 
 -- | An abstract syntax element. Has methods for describing the syntax in
 --   output. Minimum complete definition: @concrete@ and @kind@.
-class Syntax s where
+class Syntax c s where
 
   -- | Convert an abstract syntax element into concrete syntax.
   concrete :: s -> String
