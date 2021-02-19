@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Hasklog.Compiler (
   compileListing
 ) where
@@ -329,82 +329,82 @@ data Functor = Functor Identifier Int
              deriving (Eq, Ord, Show)
 
 
-instance Syntax WAMAbstractSyntax Program where
+instance Syntax Program where
 
   kind _ = "program"
 
   describe = kind
 
-  concrete (Program predicates) = intercalate "\n\n" (map concrete predicates)
+  wamAbstractSyntax (Program predicates) = intercalate "\n\n" (map wamAbstractSyntax predicates)
 
 
-instance Syntax WAMAbstractSyntax Predicate where
+instance Syntax Predicate where
 
   kind _ = "predicate"
 
-  describe (Predicate f _) = "predicate " ++ concrete f
+  describe (Predicate f _) = "predicate " ++ wamAbstractSyntax f
 
-  concrete (Predicate f rules) = concrete f ++ ":" ++ concreteRules
+  wamAbstractSyntax (Predicate f rules) = wamAbstractSyntax f ++ ":" ++ concreteRules
     where
-      concreteRules = concatMap (\r -> "\n\t" ++ concrete r) rules
+      concreteRules = concatMap (\r -> "\n\t" ++ wamAbstractSyntax r) rules
 
 
 
-instance Syntax WAMAbstractSyntax Rule where
+instance Syntax Rule where
 
   kind _ = "rule"
 
-  describe (Rule label _) = "rule " ++ concrete label
+  describe (Rule label _) = "rule " ++ wamAbstractSyntax label
 
-  concrete (Rule label instructions) = concrete label ++ ":" ++ concreteInsts
+  wamAbstractSyntax (Rule label instructions) = wamAbstractSyntax label ++ ":" ++ concreteInsts
     where
-      concreteInsts = concatMap (\i -> "\n\t\t" ++ concrete i) instructions
+      concreteInsts = concatMap (\i -> "\n\t\t" ++ wamAbstractSyntax i) instructions
 
 
 
-instance Syntax WAMAbstractSyntax WAM where
+instance Syntax WAM where
 
   kind _ = "WAM instruction"
 
-  concrete (GetStructure f a) = delim ["get_structure", concrete f, concrete a]
-  concrete (GetVariable  r a) = delim ["get_variable",  concrete r, concrete a]
-  concrete (GetValue     r a) = delim ["get_value",     concrete r, concrete a]
-  concrete (PutStructure f a) = delim ["put_structure", concrete f, concrete a]
-  concrete (PutVariable  r a) = delim ["put_variable",  concrete r, concrete a]
-  concrete (PutValue     r a) = delim ["put_value",     concrete r, concrete a]
-  concrete (UnifyVariable r) = delim ["unify_variable", concrete r]
-  concrete (UnifyValue    r) = delim ["unify_value",    concrete r]
-  concrete (Allocate n) = delim ["allocate", show n]
-  concrete Deallocate   = "deallocate"
-  concrete (Call    f) = delim ["call",    concrete f]
-  concrete (Execute f) = delim ["execute", concrete f]
-  concrete Proceed     = "proceed"
-  concrete (TryMeElse   l) = delim ["try_me_else",   concrete l]
-  concrete (RetryMeElse l) = delim ["retry_me_else", concrete l]
-  concrete TrustMe         = "trust_me"
+  wamAbstractSyntax (GetStructure f a) = delim ["get_structure", wamAbstractSyntax f, wamAbstractSyntax a]
+  wamAbstractSyntax (GetVariable  r a) = delim ["get_variable",  wamAbstractSyntax r, wamAbstractSyntax a]
+  wamAbstractSyntax (GetValue     r a) = delim ["get_value",     wamAbstractSyntax r, wamAbstractSyntax a]
+  wamAbstractSyntax (PutStructure f a) = delim ["put_structure", wamAbstractSyntax f, wamAbstractSyntax a]
+  wamAbstractSyntax (PutVariable  r a) = delim ["put_variable",  wamAbstractSyntax r, wamAbstractSyntax a]
+  wamAbstractSyntax (PutValue     r a) = delim ["put_value",     wamAbstractSyntax r, wamAbstractSyntax a]
+  wamAbstractSyntax (UnifyVariable r) = delim ["unify_variable", wamAbstractSyntax r]
+  wamAbstractSyntax (UnifyValue    r) = delim ["unify_value",    wamAbstractSyntax r]
+  wamAbstractSyntax (Allocate n) = delim ["allocate", show n]
+  wamAbstractSyntax Deallocate   = "deallocate"
+  wamAbstractSyntax (Call    f) = delim ["call",    wamAbstractSyntax f]
+  wamAbstractSyntax (Execute f) = delim ["execute", wamAbstractSyntax f]
+  wamAbstractSyntax Proceed     = "proceed"
+  wamAbstractSyntax (TryMeElse   l) = delim ["try_me_else",   wamAbstractSyntax l]
+  wamAbstractSyntax (RetryMeElse l) = delim ["retry_me_else", wamAbstractSyntax l]
+  wamAbstractSyntax TrustMe         = "trust_me"
 
 delim :: [String] -> String
 delim = intercalate "\t"
 
 
-instance Syntax WAMAbstractSyntax Label where
+instance Syntax Label where
 
   kind _ = "label"
 
-  concrete (Label l) = show l
+  wamAbstractSyntax (Label l) = show l
 
 
-instance Syntax WAMAbstractSyntax Register where
+instance Syntax Register where
 
   kind (Register _) = "register"
   kind (StackVar _) = "stack variable"
 
-  concrete (Register r) = "X" ++ show r
-  concrete (StackVar v) = "Y" ++ show v
+  wamAbstractSyntax (Register r) = "X" ++ show r
+  wamAbstractSyntax (StackVar v) = "Y" ++ show v
 
 
-instance Syntax WAMAbstractSyntax Functor where
+instance Syntax Functor where
 
   kind _ = "functor"
 
-  concrete (Functor f n) = f ++ "/" ++ show n
+  wamAbstractSyntax (Functor f n) = f ++ "/" ++ show n

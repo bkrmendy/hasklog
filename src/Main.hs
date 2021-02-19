@@ -71,4 +71,4 @@ showResults (Cons unifier remaining)
   where          
 
     formatUnifier u = intercalate "\n" (map formatBinding (M.toList u))
-    formatBinding (var, val) = var ++ " = " ++ concrete val
+    formatBinding (var, val) = var ++ " = " ++ wamAbstractSyntax val

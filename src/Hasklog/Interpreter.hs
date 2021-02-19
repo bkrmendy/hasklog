@@ -112,7 +112,7 @@ bcompile [Atom filename] =
   do prog <- gets (toList . listing)
      let compiled = compileListing prog
      let filename' = filename ++ ".wam"
-     liftIO $ writeFile filename' (concrete compiled)
+     liftIO $ writeFile filename' (wamAbstractSyntax compiled)
      btrue []
 bcompile _ = bfail []
 

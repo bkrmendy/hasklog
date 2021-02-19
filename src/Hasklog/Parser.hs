@@ -243,24 +243,24 @@ instance Syntax Term where
 
   kind _ = "term"
 
-  concrete (Number n)   = show n
-  concrete (Atom "[]")  = "[]"
-  concrete (Atom a)     = quoteAtom a
-  concrete (Variable v) = v
+  wamAbstractSyntax (Number n)   = show n
+  wamAbstractSyntax (Atom "[]")  = "[]"
+  wamAbstractSyntax (Atom a)     = quoteAtom a
+  wamAbstractSyntax (Variable v) = v
 
   -- Lists are special-cased to output in syntactic sugar ("[a,b,c|d]") form rather than
   -- explicit form (".(a, .(b, .(c, d)))").'
-  concrete (CompoundTerm "." [head, tail]) =
-      "[" ++ concrete head ++ concreteList tail ++ "]"
+  wamAbstractSyntax (CompoundTerm "." [head, tail]) =
+      "[" ++ wamAbstractSyntax head ++ concreteList tail ++ "]"
     where
       concreteList (Atom "[]") = ""
       concreteList (CompoundTerm "." [head, tail]) =
-        ", " ++ concrete head ++ concreteList tail
-      concreteList tail = " | " ++ concrete tail
+        ", " ++ wamAbstractSyntax head ++ concreteList tail
+      concreteList tail = " | " ++ wamAbstractSyntax tail
 
-  concrete (CompoundTerm a subterms) = quoteAtom a ++ "(" ++ concreteSubterms ++ ")"
+  wamAbstractSyntax (CompoundTerm a subterms) = quoteAtom a ++ "(" ++ concreteSubterms ++ ")"
     where
-      concreteSubterms = intercalate ", " (map concrete subterms)
+      concreteSubterms = intercalate ", " (map wamAbstractSyntax subterms)
 
 
 quoteAtom :: String -> String
@@ -282,8 +282,8 @@ instance Syntax Operand where
   kind (Operand  _)     = "operand"
   kind (Operator _ def) = describeFixity (fixity def) ++ " operator"
 
-  concrete (Operand  t)   = concrete t
-  concrete (Operator a _) = concrete (Atom a)
+  wamAbstractSyntax (Operand  t)   = wamAbstractSyntax t
+  wamAbstractSyntax (Operator a _) = wamAbstractSyntax (Atom a)
 
 describeFixity :: Fixity -> String
 describeFixity Infix   = "infix"
@@ -297,7 +297,7 @@ instance Syntax HornClause where
   kind (DefiniteClause _ _) = "definite clause"
   kind (GoalClause _)       = "goal clause"
 
-  concrete (DefiniteClause head body) = concrete head ++ " :- " ++ concreteBody
+  wamAbstractSyntax (DefiniteClause head body) = wamAbstractSyntax head ++ " :- " ++ concreteBody
     where
-      concreteBody = intercalate ", " (map concrete body)
-  concrete (GoalClause goals) = intercalate ", " (map concrete goals)
+      concreteBody = intercalate ", " (map wamAbstractSyntax body)
+  wamAbstractSyntax (GoalClause goals) = intercalate ", " (map wamAbstractSyntax goals)

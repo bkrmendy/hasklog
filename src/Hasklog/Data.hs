@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Hasklog.Data (
   Identifier,
@@ -11,11 +10,9 @@ module Hasklog.Data (
   HornClause(..),
   Listing,
 
-  WAMAbstractSyntax,
-  CSyntax,
   Syntax,
   kind,
-  concrete,
+  wamAbstractSyntax,
   describe,
 
   Tree(..),
@@ -81,16 +78,17 @@ data HornClause = DefiniteClause Term [Term]
 
 type Listing = Seq HornClause
 
--- | Compiler backends
-data WAMAbstractSyntax
-data CSyntax
 
 -- | An abstract syntax element. Has methods for describing the syntax in
 --   output. Minimum complete definition: @concrete@ and @kind@.
-class Syntax c s where
+class Syntax s where
 
   -- | Convert an abstract syntax element into concrete syntax.
-  concrete :: s -> String
+  wamAbstractSyntax :: s -> String
+  
+  -- | Convert an abstract syntax element into C source
+  cSource :: s -> String
+  cSource s = "// Not implemented: " ++ wamAbstractSyntax s
 
   -- | Get a string describing the kind of syntax element (e.g., a term). Used
   --   by the default definition of @describe@.
@@ -100,7 +98,7 @@ class Syntax c s where
   --   message. The default implementation uses the kind of term and its
   --   concrete syntax.
   describe :: s -> String
-  describe s = kind s ++ " " ++ concrete s
+  describe s = kind s ++ " " ++ wamAbstractSyntax s
 
 
 

@@ -13,7 +13,7 @@ packages:
     hackage: list-transformer-1.0.4
 snapshots:
 - completed:
-    size: 491155
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/0.yaml
-    sha256: 8d3c33e0feab8e04b9ed31452e0219a2b827ed1338c809f79d986c71a177e6ba
-  original: lts-13.0
+    size: 523541
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/23.yaml
+    sha256: f761fe419a1a44fc3ef47f5bfb1853304d13320fc72b45d2798c08d21dabc23c
+  original: lts-14.23
