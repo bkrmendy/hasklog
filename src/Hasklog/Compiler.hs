@@ -366,22 +366,33 @@ instance Syntax WAM where
 
   kind _ = "WAM instruction"
 
-  wamAbstractSyntax (GetStructure f a) = delim ["get_structure", wamAbstractSyntax f, wamAbstractSyntax a]
-  wamAbstractSyntax (GetVariable  r a) = delim ["get_variable",  wamAbstractSyntax r, wamAbstractSyntax a]
-  wamAbstractSyntax (GetValue     r a) = delim ["get_value",     wamAbstractSyntax r, wamAbstractSyntax a]
-  wamAbstractSyntax (PutStructure f a) = delim ["put_structure", wamAbstractSyntax f, wamAbstractSyntax a]
-  wamAbstractSyntax (PutVariable  r a) = delim ["put_variable",  wamAbstractSyntax r, wamAbstractSyntax a]
-  wamAbstractSyntax (PutValue     r a) = delim ["put_value",     wamAbstractSyntax r, wamAbstractSyntax a]
-  wamAbstractSyntax (UnifyVariable r) = delim ["unify_variable", wamAbstractSyntax r]
-  wamAbstractSyntax (UnifyValue    r) = delim ["unify_value",    wamAbstractSyntax r]
-  wamAbstractSyntax (Allocate n) = delim ["allocate", show n]
-  wamAbstractSyntax Deallocate   = "deallocate"
-  wamAbstractSyntax (Call    f) = delim ["call",    wamAbstractSyntax f]
-  wamAbstractSyntax (Execute f) = delim ["execute", wamAbstractSyntax f]
-  wamAbstractSyntax Proceed     = "proceed"
-  wamAbstractSyntax (TryMeElse   l) = delim ["try_me_else",   wamAbstractSyntax l]
-  wamAbstractSyntax (RetryMeElse l) = delim ["retry_me_else", wamAbstractSyntax l]
-  wamAbstractSyntax TrustMe         = "trust_me"
+  wamAbstractSyntax (GetStructure f a)  = delim ["get_structure", wamAbstractSyntax f, wamAbstractSyntax a]
+  wamAbstractSyntax (GetVariable  r a)  = delim ["get_variable",  wamAbstractSyntax r, wamAbstractSyntax a]
+  wamAbstractSyntax (GetValue     r a)  = delim ["get_value",     wamAbstractSyntax r, wamAbstractSyntax a]
+  wamAbstractSyntax (PutStructure f a)  = delim ["put_structure", wamAbstractSyntax f, wamAbstractSyntax a]
+  wamAbstractSyntax (PutVariable  r a)  = delim ["put_variable",  wamAbstractSyntax r, wamAbstractSyntax a]
+  wamAbstractSyntax (PutValue     r a)  = delim ["put_value",     wamAbstractSyntax r, wamAbstractSyntax a]
+  wamAbstractSyntax (UnifyVariable r)   = delim ["unify_variable", wamAbstractSyntax r]
+  wamAbstractSyntax (UnifyValue    r)   = delim ["unify_value",    wamAbstractSyntax r]
+  wamAbstractSyntax (Allocate n)        = delim ["allocate", show n]
+  wamAbstractSyntax Deallocate          = "deallocate"
+  wamAbstractSyntax (Call    f)         = delim ["call",    wamAbstractSyntax f]
+  wamAbstractSyntax (Execute f)         = delim ["execute", wamAbstractSyntax f]
+  wamAbstractSyntax Proceed             = "proceed"
+  wamAbstractSyntax (TryMeElse   l)     = delim ["try_me_else",   wamAbstractSyntax l]
+  wamAbstractSyntax (RetryMeElse l)     = delim ["retry_me_else", wamAbstractSyntax l]
+  wamAbstractSyntax TrustMe             = "trust_me"
+  
+  cSource (GetStructure f a)  = unlines ["{", cSource f ++ ";", "get_structure(f, " ++ cSource a ++ ");", "}"]
+  cSource (PutStructure f a)  = unlines ["{", cSource f ++ ";", "put_structure(f, " ++ cSource a ++ ");", "}"] 
+  cSource (UnifyVariable r)   = "unify_variable(" ++ cSource r ++ ");"
+  cSource (GetValue r a)      = "get_value(" ++ show r ++ ", " ++ show a ++ ");"
+  cSource (PutVariable r a)   = "put_variable(" ++ show r ++ ", " ++ show a ++ ");"
+   
+  cSource i = "// Not implemented: " ++ show i
+
+  -- set_value
+  -- set_variable
 
 delim :: [String] -> String
 delim = intercalate "\t"
@@ -401,6 +412,8 @@ instance Syntax Register where
 
   wamAbstractSyntax (Register r) = "X" ++ show r
   wamAbstractSyntax (StackVar v) = "Y" ++ show v
+ 
+  cSource (Register r) = "X(" ++ show r ++ ")" 
 
 
 instance Syntax Functor where
@@ -408,3 +421,5 @@ instance Syntax Functor where
   kind _ = "functor"
 
   wamAbstractSyntax (Functor f n) = f ++ "/" ++ show n
+  
+  cSource (Functor f n) = "Structure f = { .name = " ++ f ++ ", .arity = " ++ show n ++ " };"
