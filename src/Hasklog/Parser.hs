@@ -301,3 +301,5 @@ instance Syntax HornClause where
     where
       concreteBody = intercalate ", " (map wamAbstractSyntax body)
   wamAbstractSyntax (GoalClause goals) = intercalate ", " (map wamAbstractSyntax goals)
+  
+  cSource (GoalClause goals)           = "void query() {\n" ++ concatMap cSource goals ++  "}\n"

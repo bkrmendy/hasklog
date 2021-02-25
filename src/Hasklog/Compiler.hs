@@ -294,6 +294,9 @@ cFunction :: Functor -> String
 cFunction (Functor identifier ar) = identifier ++ "_" ++ (show ar) ++ "()"
 
 
+
+
+
 -- WAM Instructions
 
 newtype Program = Program [Predicate]
@@ -332,7 +335,7 @@ newtype Label = Label Int
 data Functor = Functor Identifier Int
              deriving (Eq, Ord, Show)
 
-concreteRules :: (s -> String) -> [s] -> String 
+concreteRules :: (s -> String) -> [s] -> String
 concreteRules gen = concatMap (\r -> "\n\t" ++ gen r)
 
 instance Syntax Program where
@@ -342,7 +345,7 @@ instance Syntax Program where
   describe = kind
 
   wamAbstractSyntax (Program predicates) = intercalate "\n\n" (map wamAbstractSyntax predicates)
-
+  cSource (Program predicates) = intercalate "\n\n" (map cSource predicates)
 
 instance Syntax Predicate where
 
@@ -350,8 +353,8 @@ instance Syntax Predicate where
 
   describe (Predicate f _) = "predicate " ++ wamAbstractSyntax f
 
-  wamAbstractSyntax (Predicate f rules) = wamAbstractSyntax f ++ ":" ++ concreteRules wamAbstractSyntax rules  
-  cSource (Predicate f rules) = "void " ++ cFunction f ++ "{\n" ++ concreteRules cSource rules ++ "}\n"
+  wamAbstractSyntax (Predicate f rules) = wamAbstractSyntax f ++ ":" ++ concreteRules wamAbstractSyntax rules
+  cSource (Predicate f rules) = "void " ++ cFunction f ++ "{" ++ concreteRules cSource rules ++ "}\n"
 
 
 instance Syntax Rule where
@@ -364,6 +367,7 @@ instance Syntax Rule where
     where
       concreteInsts = concatMap (\i -> "\n\t\t" ++ wamAbstractSyntax i) instructions
 
+  cSource (Rule _ instructions) = concatMap (\i -> "\n\t" ++ cSource i) instructions
 
 
 instance Syntax WAM where
@@ -386,9 +390,11 @@ instance Syntax WAM where
   wamAbstractSyntax (TryMeElse   l)     = delim ["try_me_else",   wamAbstractSyntax l]
   wamAbstractSyntax (RetryMeElse l)     = delim ["retry_me_else", wamAbstractSyntax l]
   wamAbstractSyntax TrustMe             = "trust_me"
-  
-  cSource (PutStructure f a)  = unlines ["{", cSource f ++ ";", "put_structure(f, " ++ cSource a ++ ");", "}"] 
-  cSource (GetStructure f a)  = unlines ["{", cSource f ++ ";", "get_structure(f, " ++ cSource a ++ ");", "}"]
+  wamAbstractSyntax (SetVariable r)     = delim ["set_variable", wamAbstractSyntax r]
+  wamAbstractSyntax (SetValue r)        = delim ["set_value", wamAbstractSyntax r]
+
+  cSource (PutStructure f a)  = unlines ["{", "\t\t" ++ cSource f ++ ";", "\t\tput_structure(f, " ++ cSource a ++ ");", "\t}"]
+  cSource (GetStructure f a)  = unlines ["{", "\t\t" ++ cSource f ++ ";", "\t\tget_structure(f, " ++ cSource a ++ ");", "\t}"]
   cSource (SetVariable r)     = "set_variable(" ++ show r ++ ");"
   cSource (UnifyVariable r)   = "unify_variable(" ++ cSource r ++ ");"
   cSource (PutVariable r a)   = "put_variable(" ++ show r ++ ", " ++ show a ++ ");"
@@ -402,7 +408,6 @@ instance Syntax WAM where
   cSource Proceed             = []
   cSource (Call f)            = cFunction f ++ ";"
 
-   
   cSource i = "// Not implemented: " ++ show i
 
   -- set_value
@@ -428,7 +433,7 @@ instance Syntax Register where
   wamAbstractSyntax (StackVar v) = "Y" ++ show v
  
   cSource (Register r) = "X(" ++ show r ++ ")"
-  cSource (StackVar r) = "Y(" ++ show r ++ ")" 
+  cSource (StackVar r) = "Y(" ++ show r ++ ")"
 
 
 instance Syntax Functor where
@@ -436,5 +441,4 @@ instance Syntax Functor where
   kind _ = "functor"
 
   wamAbstractSyntax (Functor f n) = f ++ "/" ++ show n
-  
-  cSource (Functor f n) = "Structure f = { .name = " ++ f ++ ", .arity = " ++ show n ++ " };"
+  cSource (Functor f n) = "Structure f = { .name = " ++ f ++ ", .arity = " ++ show n ++ " }"

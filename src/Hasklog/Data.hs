@@ -10,9 +10,10 @@ module Hasklog.Data (
   HornClause(..),
   Listing,
 
-  Syntax(..),
+  Syntax,
   kind,
   wamAbstractSyntax,
+  cSource,
   describe,
 
   Tree(..),
