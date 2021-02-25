@@ -54,13 +54,15 @@ void unify(size_t a, size_t b);
 
 /*
  * REGISTER ACCESS
+ * Translates register number to store pointer
  */
 
 size_t X(size_t ptr);
-size_t A(size_t ptr);
+size_t Y(size_t ptr);
 
 /*
  * STACK ACCESS
+ * Translates stack pointer to store pointer
  */
 size_t STACK(size_t ptr);
 

@@ -1,19 +1,18 @@
 #include "wam.h"
 
-// example from pg. 24 of wambook
 void p_3() {
     {
         Structure f = { .name = "f", .arity = 1 };
-        get_structure(f, A(1));
+        get_structure(f, X(1));
     }
     unify_variable(X(4));
     {
         Structure h = { .name = "h", .arity = 2 };
-        get_structure(h, A(2));
+        get_structure(h, X(2));
     }
     unify_variable(X(5));
     unify_variable(X(6));
-    get_value(X(5), A(3));
+    get_value(X(5), X(3));
     {
         Structure f = { .name = "f", .arity = 1 };
         get_structure(f, X(6));
@@ -29,20 +28,19 @@ void p_3() {
  * QUERY
  */
 void query() {
-    // from pg. 24 of wambook
-    put_variable(X(4), A(1));
+    put_variable(X(4), X(1));
     {
         Structure h = { .name = "h", .arity = 2 };
-        put_structure(h, A(2));
+        put_structure(h, X(2));
     }
     set_value(X(4));
     set_variable(X(5));
     {
         Structure f = { .name = "f", .arity = 1 };
-        put_structure(f, A(3));
+        put_structure(f, X(3));
     }
     set_value(X(5));
-    p_3(); // call p/3
+    p_3();
 }
 
 int main() {

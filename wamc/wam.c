@@ -14,7 +14,6 @@ bool structure_eq(Structure f1, Structure f2) {
 
 Cell STORE[1000];       // general memory
 size_t X_base = 0;      // pointer to start of Xs
-size_t A_base = 50;     // pointer to start of As
 size_t H = 100;         // heap pointer
 size_t S = 0;           // ???
 size_t E = 500;         // stack pointer
@@ -75,12 +74,12 @@ size_t X(size_t ptr) {    // calculate address of Xi register
     return X_base + ptr;
 }
 
-size_t A(size_t ptr) {    // calculate address of Ai register
-    return A_base + ptr;
+size_t Y(size_t ptr) {
+    return E + 1 + ptr;
 }
 
 size_t STACK(size_t ptr) {
-    return E + ptr;
+    return ptr;
 }
 
 void pdl_push(size_t a) {
@@ -186,7 +185,7 @@ void get_value(size_t ptrX, size_t ptrA) {
     unify(ptrX, ptrA);
 }
 
-void reportRec(size_t ptr) {
+void reportI(size_t ptr) {
     size_t dptr = deref(ptr);
     Cell cell = STORE[dptr];
 
@@ -197,7 +196,7 @@ void reportRec(size_t ptr) {
         if (funcCell.structure.arity > 0) {
             printf("(");
             for (size_t iarg = 0; iarg < funcCell.structure.arity; ++iarg) {
-                reportRec(dptr + 2 + iarg);
+                reportI(dptr + 2 + iarg);
             }
             printf(")");
         }
@@ -206,10 +205,25 @@ void reportRec(size_t ptr) {
 
 void report(const char* var, size_t ptr) {
     printf("%s = ", var);
-    reportRec(ptr);
+    reportI(ptr);
     printf("\n");
 }
 
 void allocate(size_t n) {
-    size_t newE = E + STACK()
+    /*
+     * Stack layout with continuation pointer omitted
+     *          E | CE      -- continuation environment
+     *      E + 1 | N       -- number of stack variables
+     *      E + 2 | Y1      -- first stack variable
+     *  E + 1 + n | Yn      -- nth stack variable
+     */
+    size_t newE = E + STACK(E + 1) + 2;
+    Cell eCell = { .tag = CE, .address = E }; STORE[newE] = eCell;
+    Cell nCell = { .tag = N, .address = n }; STORE[newE + 1] = nCell;
+    E = newE;
+}
+
+void deallocate() {
+    E = STORE[STACK(E)].address;
+    // P = STACK(E + 1) not necessary, as normal call stack has this built in
 }
