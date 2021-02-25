@@ -53,7 +53,7 @@ builtins = M.fromList [
     (("true",    0), btrue),
     (("not",     1), bnot),
     (("consult", 1), bconsult),
-    (("compile", 1), bcompile),
+    (("compile", 1), bcompileProgram),
     (("op",      3), boperator)
   ]
 
@@ -107,14 +107,14 @@ bconsult [Atom filename] =
        Right _ -> btrue []
 bconsult _ = bfail []
 
-bcompile :: (MonadIO m, Functor m) => Predicate m
-bcompile [Atom filename] =
+bcompileProgram :: (MonadIO m, Functor m) => Predicate m
+bcompileProgram [Atom filename] =
   do prog <- gets (toList . listing)
      let compiled = compileListing prog
      let filename' = filename ++ ".wam"
      liftIO $ writeFile filename' (wamAbstractSyntax compiled)
      btrue []
-bcompile _ = bfail []
+bcompileProgram _ = bfail []
 
 
 

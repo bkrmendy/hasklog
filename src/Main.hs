@@ -18,7 +18,7 @@ import System.IO
 
 
 main :: IO ()
-main = interpret =<< interpreterSession <$> getArgs
+main = interpret . interpreterSession =<< getArgs
 
 
 check :: Either ParseError a -> a

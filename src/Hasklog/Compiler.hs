@@ -290,6 +290,8 @@ allocateVar permanents v =
              do put (Allocation (next + 1) (M.insert v next vars))
                 return next
 
+cFunction :: Functor -> String
+cFunction (Functor identifier ar) = identifier ++ "_" ++ (show ar) ++ "()"
 
 
 -- WAM Instructions
@@ -301,20 +303,22 @@ data Predicate = Predicate Functor [Rule]
 data Rule = Rule Label [WAM]
 
 data WAM = GetStructure Functor  Register
-         | GetVariable  Register Register
-         | GetValue     Register Register
-         | PutStructure Functor  Register
-         | PutVariable  Register Register
-         | PutValue     Register Register
-         | UnifyVariable Register
-         | UnifyValue    Register
-         | Allocate   Int
+         | GetVariable    Register Register
+         | GetValue       Register Register
+         | PutStructure   Functor  Register
+         | SetVariable    Register
+         | SetValue       Register
+         | PutVariable    Register Register
+         | PutValue       Register Register
+         | UnifyVariable  Register
+         | UnifyValue     Register
+         | Allocate       Int
          | Deallocate
-         | Call    Functor
-         | Execute Functor
+         | Call           Functor
+         | Execute        Functor
          | Proceed
-         | TryMeElse   Label
-         | RetryMeElse Label
+         | TryMeElse      Label
+         | RetryMeElse    Label
          | TrustMe
          deriving (Eq, Ord, Show)
 
@@ -328,6 +332,8 @@ newtype Label = Label Int
 data Functor = Functor Identifier Int
              deriving (Eq, Ord, Show)
 
+concreteRules :: (s -> String) -> [s] -> String 
+concreteRules gen = concatMap (\r -> "\n\t" ++ gen r)
 
 instance Syntax Program where
 
@@ -344,10 +350,8 @@ instance Syntax Predicate where
 
   describe (Predicate f _) = "predicate " ++ wamAbstractSyntax f
 
-  wamAbstractSyntax (Predicate f rules) = wamAbstractSyntax f ++ ":" ++ concreteRules
-    where
-      concreteRules = concatMap (\r -> "\n\t" ++ wamAbstractSyntax r) rules
-
+  wamAbstractSyntax (Predicate f rules) = wamAbstractSyntax f ++ ":" ++ concreteRules wamAbstractSyntax rules  
+  cSource (Predicate f rules) = "void " ++ cFunction f ++ "{\n" ++ concreteRules cSource rules ++ "}\n"
 
 
 instance Syntax Rule where
@@ -383,11 +387,21 @@ instance Syntax WAM where
   wamAbstractSyntax (RetryMeElse l)     = delim ["retry_me_else", wamAbstractSyntax l]
   wamAbstractSyntax TrustMe             = "trust_me"
   
-  cSource (GetStructure f a)  = unlines ["{", cSource f ++ ";", "get_structure(f, " ++ cSource a ++ ");", "}"]
   cSource (PutStructure f a)  = unlines ["{", cSource f ++ ";", "put_structure(f, " ++ cSource a ++ ");", "}"] 
+  cSource (GetStructure f a)  = unlines ["{", cSource f ++ ";", "get_structure(f, " ++ cSource a ++ ");", "}"]
+  cSource (SetVariable r)     = "set_variable(" ++ show r ++ ");"
   cSource (UnifyVariable r)   = "unify_variable(" ++ cSource r ++ ");"
-  cSource (GetValue r a)      = "get_value(" ++ show r ++ ", " ++ show a ++ ");"
   cSource (PutVariable r a)   = "put_variable(" ++ show r ++ ", " ++ show a ++ ");"
+  cSource (GetVariable r a)   = "get_variable(" ++ show r ++ ", " ++ show a ++ ");"
+  cSource (SetValue r)        = "set_value(" ++ show r ++ ");"
+  cSource (UnifyValue r)      = "unify_value(" ++ show r ++ ");"
+  cSource (PutValue r a)      = "put_value(" ++ show r ++ ", " ++ show a ++ ");"
+  cSource (GetValue r a)      = "get_value(" ++ show r ++ ", " ++ show a ++ ");"
+  cSource (Allocate n)        = "allocate(" ++ show n ++ ");"
+  cSource Deallocate          = "deallocate();"
+  cSource Proceed             = []
+  cSource (Call f)            = cFunction f ++ ";"
+
    
   cSource i = "// Not implemented: " ++ show i
 
@@ -413,7 +427,8 @@ instance Syntax Register where
   wamAbstractSyntax (Register r) = "X" ++ show r
   wamAbstractSyntax (StackVar v) = "Y" ++ show v
  
-  cSource (Register r) = "X(" ++ show r ++ ")" 
+  cSource (Register r) = "X(" ++ show r ++ ")"
+  cSource (StackVar r) = "Y(" ++ show r ++ ")" 
 
 
 instance Syntax Functor where
