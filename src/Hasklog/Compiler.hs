@@ -5,7 +5,7 @@ module Hasklog.Compiler (
 ) where
 
 import Hasklog.Data
-
+import Debug.Trace
 import Prelude hiding (Functor)
 import Control.Applicative ((<$>), (<*>))
 import Control.Monad.Writer hiding (Functor)
@@ -15,7 +15,6 @@ import Data.Functor.Identity (Identity)
 import Data.List (intercalate)
 import Data.Map (Map)
 import qualified Data.Map as M
-import Data.Maybe
 import Data.Sequence (Seq, ViewL(..), (><))
 import qualified Data.Sequence as Q
 import Data.Set (Set)
@@ -27,15 +26,25 @@ data SimpleTerm = SVariable Identifier
                 deriving (Eq, Ord, Show)
 
 data SimpleClause = SDefiniteClause SimpleTerm [SimpleTerm]
-
+                  | SGoalClause [SimpleTerm]
+                  deriving Show
 
 runCompiler :: Writer (Seq WAM) a -> [WAM]
 runCompiler = toList . execWriter
 
+variablesOf :: SimpleTerm -> [Identifier]
+variablesOf (SVariable v) = [v]
+variablesOf (SCompoundTerm _ terms) = concatMap variablesOf terms
 
-simplify :: HornClause -> Maybe SimpleClause
-simplify (DefiniteClause head body) = Just (SDefiniteClause (simplifyAtoms head) (map simplifyAtoms body))
-simplify (GoalClause _)             = Nothing
+goalToDefiniteClause :: [SimpleTerm] -> SimpleClause
+goalToDefiniteClause clauseBody = SDefiniteClause clauseHead clauseBody
+  where
+    variables = concatMap (map SVariable . variablesOf) clauseBody
+    clauseHead =  SCompoundTerm "query" variables
+
+simplify :: HornClause -> SimpleClause
+simplify (DefiniteClause head body) = SDefiniteClause (simplifyAtoms head) (map simplifyAtoms body)
+simplify (GoalClause body)          = SGoalClause (map simplifyAtoms body)
 
 simplifyAtoms :: Term -> SimpleTerm
 simplifyAtoms (Atom a)            = SCompoundTerm a []
@@ -43,18 +52,18 @@ simplifyAtoms (CompoundTerm f ts) = SCompoundTerm f (map simplifyAtoms ts)
 simplifyAtoms (Number a)          = SCompoundTerm (show a) []
 simplifyAtoms (Variable v)        = SVariable v
 
-
 compileListing :: [HornClause] -> Program
-compileListing listing = Program (map (uncurry compilePredicate) (M.toList predicates))
-
+compileListing listing = Program compiledPredicates (toFunctor compiledGoal)
   where
+    listing' = map simplify listing
+    SGoalClause gs = head $ [g | g@(SGoalClause _) <- listing']
+    preds = [p | p@(SDefiniteClause _ _) <- listing']
+    predicates = foldr (\clause -> M.insertWith (++) (toFunctor clause) [clause]) M.empty (compiledGoal:preds)
+    compiledGoal = goalToDefiniteClause gs
+    compiledPredicates = map (uncurry compilePredicate) (M.toList predicates)
 
-    listing' = mapMaybe simplify listing
-
-    predicates = foldr (\clause -> M.insertWith (++) (ftor clause) [clause]) M.empty listing'
-
-    ftor (SDefiniteClause (SCompoundTerm f ts) _) = Functor f (length ts)
-    ftor _ = undefined
+    toFunctor (SDefiniteClause (SCompoundTerm f ts) _) = Functor f (length ts)
+    toFunctor _ = undefined
 
 
 -- | Compile a predicate into a sequence of WAM instructions.
@@ -99,6 +108,8 @@ compileClause (SDefiniteClause head body) =
            compileCall `mapM_` body
            emit Deallocate
            emit Proceed
+-- compileClause (SGoalClause goals) = compileArgs Put (head goals)
+
 
 emit :: MonadWriter (Seq a) m => a -> m ()
 emit inst = tell (Q.singleton inst)
@@ -291,15 +302,28 @@ allocateVar permanents v =
                 return next
 
 cFunction :: Functor -> String
-cFunction (Functor identifier ar) = identifier ++ "_" ++ (show ar) ++ "()"
+cFunction (Functor identifier ar) = identifier ++ "_" ++ show ar ++ "()"
 
-
-
-
+cFile :: Functor -- query
+      -> String -- program
+      -> String -- source
+cFile query program = unlines [
+  "#include \"wam.h\""
+   , program
+   , "void query() {"
+   , cFunction query
+   , "}"
+   , "int main() {"
+   , "query();"
+   , "report(\"Z\", X(4));"
+   , "report(\"W\", X(5));"
+   , "return 0;"
+   , "}"
+   ]
 
 -- WAM Instructions
 
-newtype Program = Program [Predicate]
+data Program = Program { _rules :: [Predicate], _goal :: Functor }
 
 data Predicate = Predicate Functor [Rule]
 
@@ -344,8 +368,9 @@ instance Syntax Program where
 
   describe = kind
 
-  wamAbstractSyntax (Program predicates) = intercalate "\n\n" (map wamAbstractSyntax predicates)
-  cSource (Program predicates) = intercalate "\n\n" (map cSource predicates)
+  -- TODO: handle goal compilation
+  wamAbstractSyntax (Program predicates _) = intercalate "\n\n" (map wamAbstractSyntax predicates)
+  cSource (Program predicates goal) = cFile goal (intercalate "\n\n" (map cSource predicates))
 
 instance Syntax Predicate where
 
@@ -395,14 +420,14 @@ instance Syntax WAM where
 
   cSource (PutStructure f a)  = unlines ["{", "\t\t" ++ cSource f ++ ";", "\t\tput_structure(f, " ++ cSource a ++ ");", "\t}"]
   cSource (GetStructure f a)  = unlines ["{", "\t\t" ++ cSource f ++ ";", "\t\tget_structure(f, " ++ cSource a ++ ");", "\t}"]
-  cSource (SetVariable r)     = "set_variable(" ++ show r ++ ");"
+  cSource (SetVariable r)     = "set_variable(" ++ cSource r ++ ");"
   cSource (UnifyVariable r)   = "unify_variable(" ++ cSource r ++ ");"
-  cSource (PutVariable r a)   = "put_variable(" ++ show r ++ ", " ++ show a ++ ");"
-  cSource (GetVariable r a)   = "get_variable(" ++ show r ++ ", " ++ show a ++ ");"
-  cSource (SetValue r)        = "set_value(" ++ show r ++ ");"
-  cSource (UnifyValue r)      = "unify_value(" ++ show r ++ ");"
-  cSource (PutValue r a)      = "put_value(" ++ show r ++ ", " ++ show a ++ ");"
-  cSource (GetValue r a)      = "get_value(" ++ show r ++ ", " ++ show a ++ ");"
+  cSource (PutVariable r a)   = "put_variable(" ++ cSource r ++ ", " ++ cSource a ++ ");"
+  cSource (GetVariable r a)   = "get_variable(" ++ cSource r ++ ", " ++ cSource a ++ ");"
+  cSource (SetValue r)        = "set_value(" ++ cSource r ++ ");"
+  cSource (UnifyValue r)      = "unify_value(" ++ cSource r ++ ");"
+  cSource (PutValue r a)      = "put_value(" ++ cSource r ++ ", " ++ cSource a ++ ");"
+  cSource (GetValue r a)      = "get_value(" ++ cSource r ++ ", " ++ cSource a ++ ");"
   cSource (Allocate n)        = "allocate(" ++ show n ++ ");"
   cSource Deallocate          = "deallocate();"
   cSource Proceed             = []

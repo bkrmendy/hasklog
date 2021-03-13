@@ -12,6 +12,10 @@ bool structure_eq(Structure f1, Structure f2) {
     return strcmp(f1.name, f2.name) == 0 && f1.arity == f2.arity;
 }
 
+/*
+ * GLOBALS
+ */
+
 Cell STORE[1000];       // general memory
 size_t X_base = 0;      // pointer to start of Xs
 size_t H = 100;         // heap pointer
@@ -22,6 +26,43 @@ Mode mode = READ;       // mode
 
 size_t PDL[1000];       // push_down list
 int PDL_PTR = -1;       // empty stack
+
+size_t X(size_t ptr) {    // calculate address of Xi register
+    return X_base + ptr;
+}
+
+size_t Y(size_t ptr) {
+    return E + 1 + ptr;
+}
+
+size_t STACK(size_t ptr) {
+    return ptr;
+}
+
+void pdl_push(size_t a) {
+    assert(PDL_PTR < 999 && "Stack overflow!");
+    PDL[PDL_PTR + 1] = a;
+    PDL_PTR += 1;
+}
+
+size_t pdl_pop() {
+    assert(PDL_PTR >= 0 && "Stack underflow!");
+    size_t value = PDL[PDL_PTR];
+    PDL_PTR -= 1;
+    return value;
+}
+
+bool pdl_empty() {
+    return PDL_PTR < 0;
+}
+
+void pdl_clear() {
+    PDL_PTR = -1;
+}
+
+/*
+ * AUXILIARY FUNCTIONS
+ */
 
 size_t deref(size_t address) {
     Cell c = STORE[address];
@@ -70,38 +111,33 @@ void unify(size_t a, size_t b) {
     }
 }
 
-size_t X(size_t ptr) {    // calculate address of Xi register
-    return X_base + ptr;
+void reportI(size_t ptr) {
+    size_t dptr = deref(ptr);
+    Cell cell = STORE[dptr];
+
+    if (cell.tag == STR) {
+        Cell funcCell = STORE[dptr + 1];
+        printf("%s", funcCell.structure.name);
+
+        if (funcCell.structure.arity > 0) {
+            printf("(");
+            for (size_t iarg = 0; iarg < funcCell.structure.arity; ++iarg) {
+                reportI(dptr + 2 + iarg);
+            }
+            printf(")");
+        }
+    }
 }
 
-size_t Y(size_t ptr) {
-    return E + 1 + ptr;
+void report(const char* var, size_t ptr) {
+    printf("%s = ", var);
+    reportI(ptr);
+    printf("\n");
 }
 
-size_t STACK(size_t ptr) {
-    return ptr;
-}
-
-void pdl_push(size_t a) {
-    assert(PDL_PTR < 999 && "Stack overflow!");
-    PDL[PDL_PTR + 1] = a;
-    PDL_PTR += 1;
-}
-
-size_t pdl_pop() {
-    assert(PDL_PTR >= 0 && "Stack underflow!");
-    size_t value = PDL[PDL_PTR];
-    PDL_PTR -= 1;
-    return value;
-}
-
-bool pdl_empty() {
-    return PDL_PTR < 0;
-}
-
-void pdl_clear() {
-    PDL_PTR = -1;
-}
+/*
+ * L1 (according to wambook)
+ */
 
 void put_structure(Structure functor, size_t ptr) {
     Cell strCell = { .tag = STR, .address = H + 1 }; STORE[H] = strCell;
@@ -185,29 +221,9 @@ void get_value(size_t ptrX, size_t ptrA) {
     unify(ptrX, ptrA);
 }
 
-void reportI(size_t ptr) {
-    size_t dptr = deref(ptr);
-    Cell cell = STORE[dptr];
-
-    if (cell.tag == STR) {
-        Cell funcCell = STORE[dptr + 1];
-        printf("%s", funcCell.structure.name);
-
-        if (funcCell.structure.arity > 0) {
-            printf("(");
-            for (size_t iarg = 0; iarg < funcCell.structure.arity; ++iarg) {
-                reportI(dptr + 2 + iarg);
-            }
-            printf(")");
-        }
-    }
-}
-
-void report(const char* var, size_t ptr) {
-    printf("%s = ", var);
-    reportI(ptr);
-    printf("\n");
-}
+/*
+ * L2 (according to wambook)
+ */
 
 void allocate(size_t n) {
     /*
@@ -227,3 +243,4 @@ void deallocate() {
     E = STORE[STACK(E)].address;
     // P = STACK(E + 1) not necessary, as normal call stack has this built in
 }
+

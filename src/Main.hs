@@ -5,7 +5,6 @@ module Main (
 import Hasklog.Data
 import Hasklog.Parser
 import Hasklog.Interpreter
-
 import Data.List (intercalate)
 import Control.Monad
 import Control.Monad.Trans.Class
@@ -29,6 +28,7 @@ readAndConsult :: String -> InterpreterT IO [HornClause]
 readAndConsult file =
   do source <- lift $ readFile file
      check <$> consult program file source
+
 
 interpreterSession :: [String] -> InterpreterT IO ()
 interpreterSession files =

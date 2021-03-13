@@ -124,23 +124,13 @@ bcompileProgram _ = bfail []
 
 
 program :: (MonadIO m, Functor m) => PrologParser m [HornClause]
-program = catMaybes <$> many rule
+program = many rule
 
-rule :: (MonadIO m, Functor m) => PrologParser m (Maybe HornClause)
-rule =
-  do c <- clause
-     case c of
-       -- Execute goal clauses and return the rest of the program
-       GoalClause _ ->
-         do lift $ runListT $ resolve c
-            return Nothing
-       -- Add definite clauses to the listing and return the clause followed by the
-       -- rest of the program
-       DefiniteClause _ _ ->
-         do appendListing c
-            return (Just c)
-
-
+rule :: (MonadIO m, Functor m) => PrologParser m HornClause
+rule = do
+  c <- clause
+  appendListing c
+  return c
 
 --
 -- Resolution

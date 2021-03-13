@@ -67,6 +67,12 @@ size_t Y(size_t ptr);
 size_t STACK(size_t ptr);
 
 /*
+ * TRAIL ACCESS
+ */
+
+size_t TR(size_t);
+
+/*
  * PDL MANIPULATION
  */
 
@@ -95,6 +101,9 @@ void get_value(size_t ptrX, size_t ptrA);
 void allocate(size_t n);
 void deallocate(size_t n);
 
+void tryMeElse();
+void retryMeElse();
+void trustMe();
 /*
  * RESULT
  */

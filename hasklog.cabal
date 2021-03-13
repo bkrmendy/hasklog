@@ -10,12 +10,18 @@ common hasklog-common
     default-language: Haskell2010
     ghc-options: -Wall -Wno-name-shadowing -Wno-orphans
     build-depends:
-        transformers,
-        parsec >=3,
-        mtl >=2,
-        containers,
-        list-transformer,
-        base
+        transformers
+        , parsec >=3
+        , mtl >=2
+        , containers
+        , list-transformer
+        , base
+        , temporary
+        , process,
+        , text
+        , neatinterpolation
+
+
 
 library
     import: hasklog-common

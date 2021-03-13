@@ -24,9 +24,6 @@ void p_3() {
     }
 }
 
-/*
- * QUERY
- */
 void query() {
     put_variable(X(4), X(1));
     {
@@ -41,11 +38,11 @@ void query() {
     }
     set_value(X(5));
     p_3();
+    report("Z", X(4));
+    report("W", X(5));
 }
 
 int main() {
     query();
-    report("Z", X(4));
-    report("W", X(5));
     return 0;
 }
