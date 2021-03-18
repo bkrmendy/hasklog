@@ -12,44 +12,41 @@ bool structure_eq(Structure f1, Structure f2) {
     return strcmp(f1.name, f2.name) == 0 && f1.arity == f2.arity;
 }
 
+void cell_assign(Cell* a, Cell* b) {
+    a->tag = b->tag;
+    a->ptr = b->ptr;
+    a->structure = b->structure;
+}
+
 /*
  * GLOBALS
  */
 
-Cell STORE[1000];       // general memory
-size_t X_base = 0;      // pointer to start of Xs
-size_t H = 100;         // heap pointer
-size_t S = 0;           // ???
-size_t E = 500;         // stack pointer
+Cell HEAP[1000];       // general memory
+Cell* H = HEAP;         // heap pointer
+Cell XS[10];           // Registers
+Cell* S = HEAP;           // ???
 bool fail = false;      // fail bit
 Mode mode = READ;       // mode
 
-size_t PDL[1000];       // push_down list
+Cell* PDL[1000];       // push_down list
 int PDL_PTR = -1;       // empty stack
 
-size_t X(size_t ptr) {    // calculate address of Xi register
-    return X_base + ptr;
+Cell* X(size_t ptr) {    // calculate address of Xi register
+    return &XS[ptr];
 }
 
-size_t Y(size_t ptr) {
-    return E + 1 + ptr;
-}
-
-size_t STACK(size_t ptr) {
-    return ptr;
-}
-
-void pdl_push(size_t a) {
+void pdl_push(Cell* cell) {
     assert(PDL_PTR < 999 && "Stack overflow!");
-    PDL[PDL_PTR + 1] = a;
+    PDL[PDL_PTR + 1] = cell;
     PDL_PTR += 1;
 }
 
-size_t pdl_pop() {
+Cell* pdl_pop() {
     assert(PDL_PTR >= 0 && "Stack underflow!");
-    size_t value = PDL[PDL_PTR];
+    Cell* cell = PDL[PDL_PTR];
     PDL_PTR -= 1;
-    return value;
+    return cell;
 }
 
 bool pdl_empty() {
@@ -64,45 +61,43 @@ void pdl_clear() {
  * AUXILIARY FUNCTIONS
  */
 
-size_t deref(size_t address) {
-    Cell c = STORE[address];
-    while (c.tag == REF && c.address != address) {
-        address = c.address;
-        c = STORE[address];
+Cell* deref(Cell* cell) {
+    while (cell->tag == REF && cell->ptr != cell) {
+        cell = cell->ptr;
     }
-    return address;
+    return cell;
 }
 
-void bind(size_t a, size_t b) {
-    Cell refCell = {.tag = REF, .address = b }; STORE[a] = refCell;
+void bind(Cell* a, Cell* b) {
+    a->tag = REF;
+    a->ptr = b;
 }
 
-void unify(size_t a, size_t b) {
+void unify(Cell* a, Cell* b) {
     pdl_clear();
     pdl_push(a); pdl_push(b);
     fail |= false;
     while (!(pdl_empty() || fail)) {
-        size_t d1 = deref(pdl_pop());
-        size_t d2 = deref(pdl_pop());
+        Cell* d1 = deref(pdl_pop());
+        Cell* d2 = deref(pdl_pop());
 
         if (d1 == d2) {
             continue;
         }
 
-        Cell c1 = STORE[d1]; // { t1, v1 }
-        Cell c2 = STORE[d2]; // { t2, v2 }
-
-        if (c1.tag == REF && c1.address == d1) {
-            bind(d1, d2);
-        } else if (c2.tag == REF && c2.address == d2) {
+        if (d1->tag == REF && d1->ptr == d1) {
             bind(d2, d1);
+        } else if (d2->tag == REF && d2->ptr == d2) {
+            bind(d1, d2);
         } else {
-            Cell f1 = STORE[c1.address];
-            Cell f2 = STORE[c2.address];
-            if (f1.tag == FUNC && f2.tag == FUNC && structure_eq(f1.structure, f2.structure)) {
-                for (size_t iarg = 1; iarg <= c1.structure.arity; iarg++) {
-                    pdl_push(c1.address + iarg);
-                    pdl_push(c2.address + iarg);
+            Cell* f1 = d1->ptr;
+            Cell* f2 = d2->ptr;
+            assert(f1->tag == FUNC);
+            assert(f2->tag == FUNC);
+            if (structure_eq(f1->structure, f2->structure)) {
+                for (size_t iarg = 1; iarg <= f1->structure.arity; iarg++) {
+                    pdl_push(f1 + iarg);
+                    pdl_push(f2 + iarg);
                 }
             } else {
                 fail = true;
@@ -111,136 +106,149 @@ void unify(size_t a, size_t b) {
     }
 }
 
-void reportI(size_t ptr) {
-    size_t dptr = deref(ptr);
-    Cell cell = STORE[dptr];
+void reportI(Cell* cell) {
+    assert(cell != cell->ptr);
+    Cell* funcCell = deref(cell)->ptr;
+    assert(funcCell->tag == FUNC);
+    printf("%s", funcCell->structure.name);
 
-    if (cell.tag == STR) {
-        Cell funcCell = STORE[dptr + 1];
-        printf("%s", funcCell.structure.name);
-
-        if (funcCell.structure.arity > 0) {
-            printf("(");
-            for (size_t iarg = 0; iarg < funcCell.structure.arity; ++iarg) {
-                reportI(dptr + 2 + iarg);
+    if (funcCell->structure.arity > 0) {
+        printf("(");
+        for (size_t iarg = 0; iarg < funcCell->structure.arity; ++iarg) {
+            reportI(funcCell + 1 + iarg);
+            if (iarg < funcCell->structure.arity - 1) {
+                printf(", ");
             }
-            printf(")");
         }
+        printf(")");
     }
 }
 
-void report(const char* var, size_t ptr) {
+void report(const char* var, Cell* cell) {
+    if (fail) {
+        printf("fail!");
+        return;
+    }
     printf("%s = ", var);
-    reportI(ptr);
+    reportI(cell);
     printf("\n");
+}
+
+void print_cell(Cell* cell) {
+    if (cell->tag == REF) {
+        printf("%p | REF | %p\n", cell, cell->ptr);
+    } else if (cell->tag == FUNC) {
+        printf("%p | %s/%zu\n", cell, cell->structure.name, cell->structure.arity);
+    } else if (cell->tag == STR) {
+        printf("%p | STR | %p\n", cell, cell->ptr);
+    } else {
+        assert(0 && "Unknown tag");
+    }
+}
+
+void print_heap(size_t depth) {
+    Cell* HBase = HEAP;
+    for (size_t d = 0; d < depth; d++) {
+        print_cell(HBase);
+        HBase += 1;
+    }
+}
+
+void print_xs() {
+    printf("XS:\n");
+    for (size_t i = 0; i < 10; i++) {
+        print_cell(X(i));
+    }
+    printf("----------------------\n");
 }
 
 /*
  * L1 (according to wambook)
  */
 
-void put_structure(Structure functor, size_t ptr) {
-    Cell strCell = { .tag = STR, .address = H + 1 }; STORE[H] = strCell;
-    Cell funcCell = { .tag = FUNC, .structure = functor }; STORE[H + 1] = funcCell;
-    STORE[ptr] = STORE[H];
+void put_structure(Structure functor, Cell* cell) {
+    H->tag = STR;
+    H->ptr = H + 1;
+    (H + 1)->tag = FUNC;
+    (H + 1)->structure = functor;
+    cell_assign(cell, H);
     H = H + 2;
 }
 
-void set_variable(size_t ptr) {
-    Cell nuCell = { .tag = REF, .address = H }; STORE[H] = nuCell;
-    STORE[ptr] = STORE[H];
+void set_variable(Cell* cell) {
+    H->tag = REF;
+    H->ptr = H;
+    cell_assign(cell, H);
     H = H + 1;
 }
 
-void set_value(size_t ptr) {
-    STORE[H] = STORE[ptr];
+void set_value(Cell* cell) {
+    cell_assign(H, cell);
     H = H + 1;
 }
 
-void get_structure(Structure structure, size_t ptr) {
-    size_t addr = deref(ptr);
-    Cell c = STORE[addr];
-    if (c.tag == REF) {
-        Cell strCell = { .tag = STR, .address = H + 1 }; STORE[H] = strCell;
-        Cell funcCell = { .tag = FUNC, .structure = structure }; STORE[H + 1] = funcCell;
+void get_structure(Structure structure, Cell* cell) {
+    Cell* addr = deref(cell);
+    if (addr->tag == REF) {
+        H->tag = STR;
+        H->ptr = H + 1;
+        (H + 1)->tag = FUNC;
+        (H + 1)->structure = structure;
         bind(addr, H);
         H = H + 2;
         mode = WRITE;
-        return;
-    } else if (c.tag == STR) {
-        Cell ic = STORE[c.address];
-        if (ic.tag == FUNC && structure_eq(ic.structure, structure)) {
-            S = c.address + 1;
+    } else if (addr->tag == STR) {
+        Cell *ic = addr->ptr;
+        assert(ic->tag == FUNC);
+        if (structure_eq(ic->structure, structure)) {
+            S = addr->ptr + 1;
             mode = READ;
-            return;
         } else {
             fail = true;
         }
     } else {
-        fail = true;
+        assert(0 && "FUNC cannot be here");
     }
 }
 
-void unify_variable(size_t ptr) {
+void unify_variable(Cell* cell) {
     if (mode == READ) {
-        STORE[ptr] = STORE[S];
+        cell_assign(cell, S);
     } else if (mode == WRITE) {
-        Cell refCell = { REF, H }; STORE[H] = refCell;
-        STORE[ptr] = STORE[H];
+        H->tag = REF;
+        H->ptr = H;
+        cell_assign(cell, H);
         H = H + 1;
     }
     S = S + 1;
 }
 
-void unify_value(size_t ptr) {
+void unify_value(Cell* cell) {
     if (mode == READ) {
-        unify(ptr, S);
+        unify(cell, S);
     } else if (mode == WRITE) {
-        STORE[H] = STORE[ptr];
+        cell_assign(H, cell);
         H = H + 1;
     }
     S = S + 1;
 }
 
-void put_variable(size_t ptrX, size_t ptrA) {
-    Cell refCell = { .tag = REF, .address = H }; STORE[H] = refCell;
-    STORE[ptrX] = STORE[H];
-    STORE[ptrA] = STORE[H];
+void put_variable(Cell* x, Cell* a) {
+    H->tag = REF;
+    H->ptr = H;
+    cell_assign(x, H);
+    cell_assign(a, H);
     H = H + 1;
 }
 
-void put_value(size_t ptrX, size_t ptrA) {
-    STORE[ptrA] = STORE[ptrX];
+void put_value(Cell* x, Cell* a) {
+    cell_assign(a, x);
 }
 
-void get_variable(size_t ptrX, size_t ptrA) {
-    STORE[ptrX] = STORE[ptrA];
+void get_variable(Cell* x, Cell* a) {
+    cell_assign(x, a);
 }
 
-void get_value(size_t ptrX, size_t ptrA) {
-    unify(ptrX, ptrA);
+void get_value(Cell* x, Cell* a) {
+    unify(x, a);
 }
-
-/*
- * L2 (according to wambook)
- */
-
-void allocate(size_t n) {
-    /*
-     * Stack layout with continuation pointer omitted
-     *          E | CE      -- continuation environment
-     *      E + 1 | N       -- number of stack variables
-     *      E + 2 | Y1      -- first stack variable
-     *  E + 1 + n | Yn      -- nth stack variable
-     */
-    size_t newE = E + STACK(E + 1) + 2;
-    Cell eCell = { .tag = CE, .address = E }; STORE[newE] = eCell;
-    Cell nCell = { .tag = N, .address = n }; STORE[newE + 1] = nCell;
-    E = newE;
-}
-
-void deallocate() {
-    E = STORE[STACK(E)].address;
-    // P = STACK(E + 1) not necessary, as normal call stack has this built in
-}
-

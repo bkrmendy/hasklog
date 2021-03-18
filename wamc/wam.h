@@ -36,10 +36,10 @@ typedef struct {
 
 bool structure_eq(Structure f1, Structure f2);
 
-typedef struct {
+typedef struct Cell {
     Tag tag;
     union {
-        size_t address;         // used by: REF, STR, CE, N
+        struct Cell* ptr;         // used by: REF, STR, CE, N
         Structure structure;    // used by: FUNC
     };
 } Cell;
@@ -48,36 +48,23 @@ typedef struct {
  * WAM INSTRINSICS
  */
 
-size_t deref(size_t address);
-void bind(size_t a, size_t b);
-void unify(size_t a, size_t b);
+Cell* deref(Cell* cell);
+void bind(Cell* a, Cell* b);
+void unify(Cell* a, Cell* b);
 
 /*
  * REGISTER ACCESS
  * Translates register number to store pointer
  */
 
-size_t X(size_t ptr);
-size_t Y(size_t ptr);
-
-/*
- * STACK ACCESS
- * Translates stack pointer to store pointer
- */
-size_t STACK(size_t ptr);
-
-/*
- * TRAIL ACCESS
- */
-
-size_t TR(size_t);
+Cell* X(size_t ptr);
 
 /*
  * PDL MANIPULATION
  */
 
-void pdl_push(size_t a);
-size_t pdl_pop();
+void pdl_push(Cell* cell);
+Cell* pdl_pop();
 void pdl_clear();
 bool pdl_empty();
 
@@ -85,21 +72,21 @@ bool pdl_empty();
  * WAM INSTRUCTIONS
  */
 
-void put_structure(Structure functor, size_t ptr);
-void get_structure(Structure structure, size_t ptr);
+void put_structure(Structure functor, Cell* cell);
+void get_structure(Structure structure, Cell* cell);
 
-void set_variable(size_t ptr);
-void unify_variable(size_t ptr);
-void put_variable(size_t ptrX, size_t ptrA);
-void get_variable(size_t ptrX, size_t ptrA);
+void set_variable(Cell* cell);
+void unify_variable(Cell* cell);
+void put_variable(Cell* x, Cell* a);
+void get_variable(Cell* x, Cell* a);
 
-void set_value(size_t ptr);
-void unify_value(size_t ptr);
-void put_value(size_t ptrX, size_t ptrA);
-void get_value(size_t ptrX, size_t ptrA);
+void set_value(Cell* cell);
+void unify_value(Cell* cell);
+void put_value(Cell* x, Cell* a);
+void get_value(Cell* x, Cell* a);
 
-void allocate(size_t n);
-void deallocate(size_t n);
+void print_heap(size_t depth);
+void print_xs();
 
 void tryMeElse();
 void retryMeElse();
@@ -108,6 +95,6 @@ void trustMe();
  * RESULT
  */
 
-void report(const char* var, size_t ptr);
+void report(const char* var, Cell* cell);
 
 #endif //WAMC_WAM_H
