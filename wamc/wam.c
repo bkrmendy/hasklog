@@ -68,6 +68,20 @@ Cell* deref(Cell* cell) {
     return cell;
 }
 
+void cell_set_ptr(Cell* cell, Tag tag, Cell* ptr) {
+    cell->tag = tag;
+    cell->ptr = ptr;
+}
+
+void cell_set_func(Cell* cell, Structure str) {
+    cell->tag = FUNC;
+    cell->structure = str;
+}
+
+void incr_H(size_t offset) {
+    H = H + offset;
+}
+
 void bind(Cell* a, Cell* b) {
     a->tag = REF;
     a->ptr = b;
@@ -134,68 +148,35 @@ void report(const char* var, Cell* cell) {
     printf("\n");
 }
 
-void print_cell(Cell* cell) {
-    if (cell->tag == REF) {
-        printf("%p | REF | %p\n", cell, cell->ptr);
-    } else if (cell->tag == FUNC) {
-        printf("%p | %s/%zu\n", cell, cell->structure.name, cell->structure.arity);
-    } else if (cell->tag == STR) {
-        printf("%p | STR | %p\n", cell, cell->ptr);
-    } else {
-        assert(0 && "Unknown tag");
-    }
-}
-
-void print_heap(size_t depth) {
-    Cell* HBase = HEAP;
-    for (size_t d = 0; d < depth; d++) {
-        print_cell(HBase);
-        HBase += 1;
-    }
-}
-
-void print_xs() {
-    printf("XS:\n");
-    for (size_t i = 0; i < 10; i++) {
-        print_cell(X(i));
-    }
-    printf("----------------------\n");
-}
-
 /*
  * L1 (according to wambook)
  */
 
 void put_structure(Structure functor, Cell* cell) {
-    H->tag = STR;
-    H->ptr = H + 1;
-    (H + 1)->tag = FUNC;
-    (H + 1)->structure = functor;
+    cell_set_ptr(H, STR, H + 1);
+    cell_set_func(H + 1, functor);
     cell_assign(cell, H);
-    H = H + 2;
+    incr_H(2);
 }
 
 void set_variable(Cell* cell) {
-    H->tag = REF;
-    H->ptr = H;
+    cell_set_ptr(H, REF, H);
     cell_assign(cell, H);
-    H = H + 1;
+    incr_H(2);
 }
 
 void set_value(Cell* cell) {
     cell_assign(H, cell);
-    H = H + 1;
+    incr_H(1);
 }
 
 void get_structure(Structure structure, Cell* cell) {
     Cell* addr = deref(cell);
     if (addr->tag == REF) {
-        H->tag = STR;
-        H->ptr = H + 1;
-        (H + 1)->tag = FUNC;
-        (H + 1)->structure = structure;
+        cell_set_ptr(H, STR, H + 1);
+        cell_set_func(H + 1, structure);
         bind(addr, H);
-        H = H + 2;
+        incr_H(2);
         mode = WRITE;
     } else if (addr->tag == STR) {
         Cell *ic = addr->ptr;
@@ -215,10 +196,9 @@ void unify_variable(Cell* cell) {
     if (mode == READ) {
         cell_assign(cell, S);
     } else if (mode == WRITE) {
-        H->tag = REF;
-        H->ptr = H;
+        cell_set_ptr(H, REF, H);
         cell_assign(cell, H);
-        H = H + 1;
+        incr_H(1);
     }
     S = S + 1;
 }
@@ -228,17 +208,16 @@ void unify_value(Cell* cell) {
         unify(cell, S);
     } else if (mode == WRITE) {
         cell_assign(H, cell);
-        H = H + 1;
+        incr_H(1);
     }
     S = S + 1;
 }
 
 void put_variable(Cell* x, Cell* a) {
-    H->tag = REF;
-    H->ptr = H;
+    cell_set_ptr(H, REF, H);
     cell_assign(x, H);
     cell_assign(a, H);
-    H = H + 1;
+    incr_H(1);
 }
 
 void put_value(Cell* x, Cell* a) {
